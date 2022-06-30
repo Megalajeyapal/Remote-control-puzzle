@@ -1,0 +1,313 @@
+/*************************************************
+**			
+*			Remote Control Puzzle
+**
+************************************************/
+
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
+#define firstChannel 0
+#define lastChannel 10000
+#define blockSize 40
+#define channelSeq 50
+
+using namespace std;
+
+/*************************************************************************//*
+ * @brief      Valid Channel Check
+ * @details    This Functions Checks the entered channel number is Valid/not
+ 				Valid channel cannot be < MinChannel and > MaxChannel
+ * ************************************************************************/
+
+int ValidChannel(int channel,int min, int max){
+	
+	return (channel<min || channel>max) ? 0 : 1;
+	
+}
+
+/*************************************************************************//*
+ * @brief      Checking Blocked channels
+ * @details     This function sequence of channels entered with the 
+ *				blocked channels, because all channels in the sequence cannot be in the 
+ *				blocked list
+ * @parameters  Vector A, Vector B
+ 
+ * ************************************************************************/
+
+int BlockChecking(vector<int> A, vector<int> B){
+	int element =0;
+	for(int i=0; i<B.size();i++){		
+	if(find(A.begin(),A.end(),B[i])!=A.end())
+		element++;	
+	}
+	return (element == B.size()) ? 1 : 0;
+}
+
+/*************************************************************************//*
+ * @brief      Checking Blocked channels
+ * @details     This function Finds the proided channel in the Blocked channels
+ * @parameters  Vector A, int channel
+ 
+ * ************************************************************************/
+
+int BlockChecking(vector<int> A, int channel){
+	
+	return (find(A.begin(),A.end(),channel)!=A.end()) ? 1 :  0;
+	
+}
+
+/*************************************************************************//*
+ * @brief      Get number of digits
+ * @details     Calculates number of digits in the given number
+ * @parameters  int num
+ * ************************************************************************/
+
+int GetDigits(int num)
+{
+	int digit=0;
+	while(num!=0){
+		num = num/10;
+		digit++;
+	}
+	return digit;
+}
+
+/*************************************************************************//*
+ * @brief      Generate inbetween values
+ * @details     This function generates  id values between the given two numbers
+ * @parameters  int a, int b
+ 
+ * ************************************************************************/
+
+vector<int> GenerateValues(int a, int b)
+{
+	int min,max;
+	vector<int> midValues;
+	if(a<b){
+		min = a;
+		max = b;
+	}else{
+		min = b;
+		max = a;
+	}
+	for(int i = min+1; i<max ; i++){
+		midValues.push_back(i);
+	}
+	
+	return midValues;	
+}
+
+/*************************************************************************//*
+ * @brief      gets possible clicks using UP button
+ * @parameters  int channel, int prev, int lowChannel, int highChannel, vector<int> blocked
+ 
+ * ************************************************************************/
+int ReachableByUp(int channel, int prev, int lowChannel, int highChannel, vector<int> blocked){
+	
+	int digits= 0;
+	int count=0;
+	vector<int> midValues;	
+	
+	/*****below line will return the minimum distance between the previous and current channel****************************
+	*	Eg: if lowChannel = 1 & highChannel = 100 
+	*        prev = 99, current(next channel to click) = 2
+	* 		this line will calculate up button clicks as [ abs(99 -100)+ abs(2-1) ], if that value is >digits then that many
+	*		UP buttons can be clicked.
+	**********************************************************************************************************************************/
+	int upValue = ((abs(prev-highChannel)==0) ? 1 : abs(prev-highChannel))+((abs(channel-lowChannel)==0) ? 1 : abs(channel-lowChannel));	
+	if(abs(channel-prev)==1)
+		{
+			if(BlockChecking(blocked,channel)==1)    // Checks whether the current channel to be pressed is in blocked list
+			{
+				digits = GetDigits(channel);		// If yes, that channel cannot be accessed using UP/DOWN channel so get its digits count				
+				count += digits;  					//press buttons as equal to its digits				
+			}else{
+				count++;							//the channel can be accessed with one click (UP/DOWN)
+			}
+		}
+		else if(abs(channel - prev) > 1)
+		{			
+			if(((prev==lowChannel)&&(channel==highChannel)) || ((prev==highChannel)&&(channel==lowChannel))){
+				count++;								//to access highest from lowest channel and viceversa, one button click is required
+			}
+			else{
+				midValues = GenerateValues(prev, channel);	//generate values b/w curent channel number and the previous channel				
+				if(BlockChecking(blocked,midValues)==1){		//if all b/w values are in blocked list then current channel can be accessed with one click
+					count++;
+				}else{
+					digits = GetDigits(channel);			//if all b/w values are not in blocked list then get current channel's digits values					
+					if(digits > abs(prev-channel)){			//if diff b/w previous & current channel > current channel's digits
+						count+=abs(prev-channel);			//then current channel can be accessed using UP/DOWN button instead of clicking each digit button
+					}else if(digits > upValue){
+						count+=upValue;
+					}else{
+						count += digits;						//press buttons as equal to its digits
+					}	
+				}
+			}
+		}
+		return count;		
+}
+
+/*************************************************************************//*
+ * @brief      gets possible clicks using DOWN button
+ * @parameters  int channel, int prev, int lowChannel, int highChannel, vector<int> blocked
+ 
+ * ************************************************************************/
+int ReachableByDown(int channel, int prev, int lowChannel, int highChannel, vector<int> blocked){
+	
+	int digits = 0;
+	int count = 0;
+	vector<int> midValues;
+	
+		/*****below line will return the minimum distance between the previous and current channel****************************
+	*	Eg: if lowChannel = 1 & highChannel = 100 
+	*        prev = 2, current(next channel to click) = 99
+	* 		this line will calculate DOWN button clicks as [ abs(2 -1)+ abs(99-100) ], if that value is >digits then that many
+	*		DOWN buttons can be clicked.
+	**********************************************************************************************************************************/
+	int downValue = ((abs(prev-lowChannel)==0) ? 1 : abs(prev-lowChannel))+((abs(channel-highChannel)==0) ? 1 : abs(channel-highChannel));
+		if(abs(channel-prev)==1)
+		{
+			if(BlockChecking(blocked,channel)==1)  // Checks whether the current channel to be pressed is in blocked list
+			{
+				digits = GetDigits(channel);		// If yes, that channel cannot be accessed using UP/DOWN channel so get its digits count				
+				count += digits;					    //press buttons as equal to its digits				
+			}else{		
+				count++;								//the channel can be accessed with one click (UP/DOWN)
+			}
+		}
+		else if(abs(channel - prev) > 1)
+		{			
+			if(((prev==lowChannel)&&(channel==highChannel)) || ((prev==highChannel)&&(channel==lowChannel)))
+			{
+				count++;								//to access highest from lowest channel and viceversa, one button click is required
+			}
+			else{
+				midValues = GenerateValues(prev, channel);	//generate values b/w curent channel number and the previous channel				
+				if(BlockChecking(blocked,midValues)==1){		//if all b/w values are in blocked list then current channel can be accessed with one click
+					count++;
+				}else{
+					digits = GetDigits(channel);			//if all b/w values are not in blocked list then get current channel's digits values
+					
+					if(digits > abs(prev-channel)){			//if diff b/w previous & current channel > current channel's digits
+						count+=abs(prev-channel);			//then current channel can be accessed using UP/DOWN button instead of clicking each digit button
+					}else if(digits > downValue){
+							count+= downValue;
+					}
+					else{
+						count += digits;						//press buttons as equal to its digits
+					}
+				}
+			}
+		}
+		return count;
+	
+}
+int ReachableByBack(vector<int> channels, int pos){
+	
+	int count = 0;
+	if(channels[pos] == channels[pos-2]){
+		count++;
+	}
+	
+	return count;
+}
+int main() {
+	
+	/***** Variables **********/
+
+	int lowChannel =0, highChannel =0;
+	int bChannels =0,cNo =0, upDown =0;
+	int tChannels=0;
+	int prev=0;
+	int count =0, digits=0;
+	
+	
+	/***** Vectors **********/	
+	vector<int> blocked;
+	vector<int> channels;
+	vector<int> midValues;
+	
+	/***** Function Declarations **********/	
+	int ValidChannel(int channel, int lowChannel,int highChannel);
+	int BlockChecking(vector<int> blocked, vector<int> channels);
+	int BlockChecking(vector<int> blocked, int channels);
+	vector<int> GenerateValues(int min, int max);
+	int GetDigits(int num);
+	int ReachableByDown(int channel, int prev, int lowChannel, int highChannel, vector<int> blocked);
+	int ReachableByDown(int channel, int prev, int lowChannel, int highChannel, vector<int> blocked);
+	int ReachableByBack(vector<int> channels, int pos);
+	
+	/***** Reading Inputs **********/	
+	
+	// cout<<"Lowest Channel number : ";
+	cin>>lowChannel;
+	if(lowChannel<= firstChannel || lowChannel>lastChannel){
+		cout<<"Lowest Channel number should be > 0 and <=10000";
+		return 0;
+	}
+	// cout<<"\nHighest Channel number : ";
+	cin>>highChannel;
+	if(highChannel<lowChannel || highChannel>lastChannel){
+		cout<<"Highest Channel number should be > lowest_channel_number and <=10000";
+		return 0;
+	}
+	// cout << "\nBlocked Channnels number (<=40) : ";
+	cin >> bChannels;
+	if(bChannels>blockSize){
+		cout<<"Blocked channels should be <=40";
+		return 0;
+	}
+	// cout<<"\nChannels list :" ;
+	for (int i=0; i<bChannels;i++)
+	{
+		cin>>cNo;
+		if(ValidChannel(cNo,lowChannel,highChannel)==1){
+			blocked.push_back(cNo);
+		}else{
+			cout<<"Channel number is not valid";
+;			return 0;
+		}
+	}
+	
+	//cout<<"\nTotal number of channels to be viewed (b/w 1 to 50) : ";	
+	cin>>tChannels;
+	if(tChannels<0 || tChannels >channelSeq){
+		cout<<"CSequence of channel numbers should be b/w 1 to 50";
+		return 0;
+	}
+	cout<<"\nChannels list :" ;
+	for (int i=0; i<tChannels;i++)
+	{
+		cin>>cNo;
+		if(ValidChannel(cNo,lowChannel,highChannel)==1){
+			channels.push_back(cNo);
+		}else{
+			cout<<"\nChannel number is not valid";
+			return 0;
+		}		
+	}
+	if(BlockChecking(blocked,channels)==1){
+			cout<<"Entered channels are under blocked list...!";
+			return 0;
+	}
+		
+	/***** Processing Inputs **********/	
+	
+	//For each channel number, below block will get all possible button clicks, and count the least button clicks	
+	for(int i=0;i<channels.size();i++)
+	{
+		upDown = min(ReachableByUp(channels[i],prev,lowChannel,highChannel,blocked), ReachableByDown(channels[i],prev,lowChannel,highChannel,blocked));
+		count += (ReachableByBack(channels,i) > 0) ? min(upDown, ReachableByBack(channels,i)) : upDown;
+	
+		prev = channels[i];										// set current channel to previous
+	}
+	cout << "\n\nButton clicks :"<<count;
+	return 0;
+}
+
